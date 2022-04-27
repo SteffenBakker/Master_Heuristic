@@ -12,7 +12,8 @@ class Environment:
 
     charged_rate = 0.95
 
-    def __init__(self, start_hour, simulation_time, num_stations,all_stations , num_vehicles, init_branching, scenarios, memory_mode=False,
+    def __init__(self, start_hour, simulation_time, num_stations,all_stations , 
+                 num_vehicles, init_branching, scenarios, memory_mode=False,
                  trigger_start_stack=list(), greedy=False, weights=(0.6, 0.1, 0.3, 0.8, 0.2),
                  criticality=True, crit_weights=(0.2, 0.1, 0.5, 0.2)):
         self.stations = None
@@ -43,7 +44,6 @@ class Environment:
         self.initial_stack = None
 
         self.total_gen_trips = len(trigger_start_stack)
-        self.set_up_system()
 
         self.total_starvations = 0
         self.total_congestions = 0
@@ -53,8 +53,10 @@ class Environment:
 
         self.vehicle_vis = None
 
+    
     def set_up_system(self):
         
+        print('NUM_VEHICLES: ',self.num_vehicles)
         self.stations = self.generate_stations(self.num_stations,self.all_stations)
         self.vehicles = self.generate_vehicles(self.num_vehicles)
         

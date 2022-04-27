@@ -5,58 +5,95 @@ import copy
 import pandas as pd
 from openpyxl import load_workbook
 import numpy as np
+import itertools as it
 
-simple_run = True
-scenario_analysis = False
 
-if simple_run:
+simple_run = False
+scenario_analysis = True
 
-    #Parameters
-    start_hour = 7
-    simulation_time = 240  # 7 am to 11 pm   = 60*16=960   -> Smaller: 240 (60*4)
-    num_stations = 20   #was at 200
-    num_vehicles = 1
-    subproblem_scenarios = 2   #was at ten
-    branching = 7
-    time_horizon=25   # TO DO
-    
-    seed_trips = 1    # TO DO
-    seed_subproblems = 1    # TO DO
+#BASE DATA
+
+#Parameters
+start_hour = 7
+simulation_time = 240  # 7 am to 11 pm   = 60*16=960   -> Smaller: 240 (60*4)
+num_stations = 20   #was at 200
+num_vehicles = 4
+subproblem_scenarios = 2   #was at ten
+branching = 7
+time_horizon=25   # TO DO
+
+seed_trips = 1    # TO DO
+seed_subproblems = 1    # TO DO
+basic_seed = 13
+
+
+#SCENARIO DATA
 
 if scenario_analysis:
 
     # TO DO    
 
     inputs = {
-    'seed_generating_trips':list(range(0,3)),   #simulate 10 different days
-    'init_branching':[3,5,7],
-    'no_vehicles':[0,1],
-    'no_stations':[10,20]
+    #'seed_generating_trips':list(range(0,3)),   #simulate 10 different days
+    #'init_branching':[3,5,7],
+    'num_vehicles':[0,1,2,5],
+    'num_stations':[20,50]
     }
 
-#This is setup which has to be changed.
-#all_stations = generate_all_stations(start_hour)
-#stations = create_subset(all_stations,no_stations)
-#stations[4].depot = True
+
+#COMMON DATA FOR ALL SCENARIOS
+all_stations = generate_all_stations(start_hour)
 
 
-
-scenario_analysis = False
-
-
+#RUN ANALYSIS
 
 if __name__ == '__main__':
     
     if simple_run:
-        
-        np.random.seed(12)
-        
-        all_stations = generate_all_stations(start_hour)
-        sim_env = Environment(start_hour, simulation_time, num_stations, all_stations, num_vehicles, branching, subproblem_scenarios, greedy=True)
+        np.random.seed(basic_seed)
+        sim_env = Environment(start_hour, simulation_time, num_stations, copy.deepcopy(all_stations), 
+                              num_vehicles, branching, subproblem_scenarios, greedy=False)
         sim_env.set_up_system()    # SETUP TO DO
         sim_env.run_simulation()
         write_excel_output(sim_env)
         
+    if scenario_analysis:
+        keys = sorted(inputs)
+        combinations = list(it.product(*(inputs[key] for key in keys)))
+        for values in combinations:
+            
+            #initial setup
+            np.random.seed(basic_seed)
+            sim_env = Environment(start_hour, simulation_time, num_stations, copy.deepcopy(all_stations), 
+                                  num_vehicles, branching, subproblem_scenarios, 
+                                  greedy=True)
+            
+            #update the parameters for the scenario
+            parameters = dict(zip(keys, values))
+            for key, value in parameters.items():
+                setattr(sim_env,key, value)
+            
+            
+            #start simulation
+            sim_env.run_simulation()
+            write_excel_output(sim_env)
+            del sim_env,parameters
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
     
     
     
