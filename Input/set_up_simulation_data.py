@@ -1,9 +1,11 @@
 import datetime
 from Station import Station
 from google.cloud import bigquery as bq
+import pickle
+
 
 if True:
-    def setup_stations_students(client):
+    def setup_stations_students(client,pull_data_server=False):
         """
         function used to setup stations for students without access to all BQ data
         """
@@ -14,14 +16,33 @@ if True:
         driving_time_query = "SELECT * FROM `uip-students.loaded_data.simulation_driving_times`"
         coordinate_query = "SELECT DISTINCT dock_group_id, dock_group_coords.latitude, dock_group_coords.longitude FROM `uip-students.loaded_data.stations_snapshots`"
     
-        coordinates = get_data_from_bq(coordinate_query, client)
-        coordinate_dict = get_input_data_from_coordinate_df(coordinates)
-        demand_df = get_data_from_bq(demand_query, client)
-        snapshot_df = get_data_from_bq(snapshot_query, client)
-        movement_df = get_data_from_bq(dockgroup_movement_query, client)
-        car_movement_df = get_data_from_bq(driving_time_query, client)
+        save_data = False
+        
+        if pull_data_server: #pull from server
+            coordinates = get_data_from_bq(coordinate_query, client)
+            demand_df = get_data_from_bq(demand_query, client)
+            snapshot_df = get_data_from_bq(snapshot_query, client)
+            movement_df = get_data_from_bq(dockgroup_movement_query, client)
+            car_movement_df = get_data_from_bq(driving_time_query, client)
+            if save_data:
+                all_data_bigquery = [coordinates,demand_df,snapshot_df,movement_df,car_movement_df]
+                dbfile = open("Input//AllDataBigQuery", "ab")   #Or put AllDataBigQuery
+                pickle.dump(all_data_bigquery, dbfile)                     
+                dbfile.close()
+            #
+            #all_stations = pickle.load(data_file)
+            #len(all_stations) #237
+        else:
+            data_file = open("Input//AllDataBigQuery", "rb")    #open("AllDataBigQuery", "rb")   
+            all_data_bigquery = pickle.load(data_file)
+            coordinates = all_data_bigquery[0]
+            demand_df = all_data_bigquery[1]
+            snapshot_df = all_data_bigquery[2]
+            movement_df = all_data_bigquery[3]
+            car_movement_df = all_data_bigquery[4]
     
         datestring = "2019-09-17"
+        coordinate_dict = get_input_data_from_coordinate_df(coordinates)
         snapshot_input = get_input_data_from_snapshot_df(snapshot_df, datestring)
         movement_input = get_input_data_from_movement_df(movement_df, datestring, snapshot_keys=snapshot_input.keys())
         demand_input = get_input_data_from_demand_df(demand_df, snapshot_keys=snapshot_input.keys())

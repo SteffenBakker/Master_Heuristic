@@ -10,16 +10,25 @@ def get_driving_time_from_id(station_id_1, station_id_2):
     return time_json[id_key]
 
 
-def generate_all_stations(init_hour, n):
-    client = bq.Client('uip-students')
-    # valid_date = "2019-10-10"
-    stations_uip = setup_stations_students(client)
-    print("UIP DB objects collected")
-    demand_met = 0.75
 
+def generate_all_stations(init_hour):
+    
+    # valid_date = "2019-10-10"
+    
+    pull_data_server = False
+    if pull_data_server:
+        client = bq.Client('uip-students')
+    else:
+        client = None
+    stations_uip = setup_stations_students(client, pull_data_server)
+    print("UIP DB objects collected")
+    
+
+    #ideal states are defined externally
     with open('Input/station.json', 'r') as f:
         ideal_state_json = json.load(f)
 
+    #a bit arbitrary how to set up stations
     for st in stations_uip:
         if int(st.id) % 10 == 0:
             st.battery_rate = 1
@@ -39,6 +48,12 @@ def generate_all_stations(init_hour, n):
         st.current_flat_bikes = 0
         st.init_charged = st.current_charged_bikes
         st.init_flat = st.current_flat_bikes
+        
+    return stations_uip
+
+def create_subset(stations_uip,n):
+
+    demand_met = 0.75    
 
     subset = stations_uip[:n]
     subset_ids = [s.id for s in subset]

@@ -12,7 +12,8 @@ no_stations = 200
 branching = 7
 subproblem_scenarios = 10
 simulation_time = 960  # 7 am to 11 pm
-stations = generate_all_stations(start_hour, no_stations)
+all_stations = generate_all_stations(start_hour)
+stations = create_subset(all_stations,no_stations)
 stations[4].depot = True
 
 
