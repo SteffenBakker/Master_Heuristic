@@ -1,4 +1,3 @@
-import random
 from Simulation.heuristic_manager import HeuristicManager
 import time
 

@@ -1,79 +1,65 @@
-from Input.preprocess import *
-from vehicle import Vehicle
+from Input.preprocess import generate_all_stations
 from Output.save_to_excel import write_excel_output
 from Simulation.BSS_environment import Environment
 import copy
 import pandas as pd
 from openpyxl import load_workbook
+import numpy as np
+
+simple_run = True
+scenario_analysis = False
+
+if simple_run:
+
+    #Parameters
+    start_hour = 7
+    simulation_time = 240  # 7 am to 11 pm   = 60*16=960   -> Smaller: 240 (60*4)
+    num_stations = 20   #was at 200
+    num_vehicles = 1
+    subproblem_scenarios = 2   #was at ten
+    branching = 7
+    time_horizon=25   # TO DO
+    
+    seed_trips = 1    # TO DO
+    seed_subproblems = 1    # TO DO
+
+if scenario_analysis:
+
+    # TO DO    
+
+    inputs = {
+    'seed_generating_trips':list(range(0,3)),   #simulate 10 different days
+    'init_branching':[3,5,7],
+    'no_vehicles':[0,1],
+    'no_stations':[10,20]
+    }
+
+#This is setup which has to be changed.
+#all_stations = generate_all_stations(start_hour)
+#stations = create_subset(all_stations,no_stations)
+#stations[4].depot = True
 
 
-start_hour = 7
-no_stations = 20   #was at 200
-branching = 7
-subproblem_scenarios = 2   #was at ten
-simulation_time = 240  # 7 am to 11 pm   = 60*16=960   -> Smaller: 240 (60*4)
-all_stations = generate_all_stations(start_hour)
-stations = create_subset(all_stations,no_stations)
-stations[4].depot = True
 
+scenario_analysis = False
 
-
-
-def first_step():
-    v = Vehicle(init_battery_load=40, init_charged_bikes=10, init_flat_bikes=0
-                , current_station=stations[0], id=0)
-    sim_env = Environment(start_hour, simulation_time, stations, [v], branching, subproblem_scenarios, greedy=True)
-    sim_env.run_simulation()
-    write_excel_output(sim_env)
-
-
-def vehicle_analysis(days, veh, run):
-    env = Environment(start_hour, simulation_time, stations, list(), branching, subproblem_scenarios)
-
-    # Generating days
-    days = [env.generate_trips(simulation_time // 60, gen=True) for i in range(days)]
-
-
-    base_envs = list()
-    for j in range(len(days)):
-        reset_stations(stations)
-        init_base_stack = [copy.copy(trip) for trip in days[j]]
-        sim_base = Environment(start_hour, simulation_time, stations, list(), branching, subproblem_scenarios,
-                               trigger_start_stack=init_base_stack, memory_mode=True)
-        sim_base.run_simulation()
-        base_envs.append(sim_base)
-
-    for d in range(len(days)):
-        for n_veh in range(1, veh+1):
-            vehicles = list()
-            for k in range(n_veh):
-                vehicles.append(Vehicle(init_battery_load=40, init_charged_bikes=0, init_flat_bikes=0,
-                                        current_station=stations[k], id=k))
-            reset_stations(stations)
-            init_heur_stack = [copy.copy(trip) for trip in days[d]]
-            vehicles_heur = [copy.copy(veh) for veh in vehicles]
-            sim_heur = Environment(start_hour, simulation_time, stations, vehicles_heur, branching,
-                                   subproblem_scenarios, trigger_start_stack=init_heur_stack, memory_mode=True,
-                                   criticality=True)
-            sim_heur.run_simulation()
-            save_vary_vehicle_output(d+1, n_veh, sim_heur, base_envs[d], writer)
 
 
 if __name__ == '__main__':
-    print("w: weight analysis, c: strategy comparison, r: runtime analysis, fs: first step analysis, v: vehicles,"
-          "charge: charging analysis, vf: fleet analysis")
-    choice = 'fs'  # OR 'v' for vehicle
-    sim_env = Environment(start_hour, 0, stations, list(), branching, subproblem_scenarios)
-    sim_env.run_simulation()
-    if choice == 'v':
-        scenarios = input('Number of days:')
-        vehicles = input('Number of vehicles:')
-        run = input('run number:')
-        vehicle_analysis(int(scenarios), int(vehicles), run)
-    elif choice == 'fs':
-        first_step()
-    else:
-        print("No analysis")
+    
+    if simple_run:
+        
+        np.random.seed(12)
+        
+        all_stations = generate_all_stations(start_hour)
+        sim_env = Environment(start_hour, simulation_time, num_stations, all_stations, num_vehicles, branching, subproblem_scenarios, greedy=True)
+        sim_env.set_up_system()    # SETUP TO DO
+        sim_env.run_simulation()
+        write_excel_output(sim_env)
+        
+    
+    
+    
         
         
         

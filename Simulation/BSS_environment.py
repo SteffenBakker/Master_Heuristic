@@ -1,27 +1,35 @@
 import json
-import random
+#import random
 import numpy as np
 from trip import Trip
 from Simulation.event import VehicleEvent
 import copy
+from Input.preprocess import create_subset
+from vehicle import Vehicle
 
 
 class Environment:
 
     charged_rate = 0.95
 
-    def __init__(self, start_hour, simulation_time, stations, vehicles, init_branching, scenarios, memory_mode=False,
+    def __init__(self, start_hour, simulation_time, num_stations,all_stations , num_vehicles, init_branching, scenarios, memory_mode=False,
                  trigger_start_stack=list(), greedy=False, weights=(0.6, 0.1, 0.3, 0.8, 0.2),
                  criticality=True, crit_weights=(0.2, 0.1, 0.5, 0.2)):
-        self.stations = stations
-        self.vehicles = vehicles
+        self.stations = None
+        self.all_stations = all_stations
+        self.vehicles = None
+        
+        self.num_stations = num_stations 
+        self.num_vehicles = num_vehicles 
+        
+        self.start_hour = start_hour
         self.current_time = start_hour * 60
         self.simulation_time = simulation_time
         self.simulation_stop = simulation_time + self.current_time
         self.trigger_start_stack = trigger_start_stack
         self.trigger_stack = list()
         self.init_branching = init_branching
-        self.scenarios = scenarios
+        self.scenarios = scenarios    #number of scenarios!!
         self.greedy = greedy
         self.weights = weights
         self.event_times = list()
@@ -43,8 +51,44 @@ class Environment:
         self.total_starvations_per_hour = list()
         self.total_congestions_per_hour = list()
 
+        self.vehicle_vis = None
+
+    def set_up_system(self):
+        
+        self.stations = self.generate_stations(self.num_stations,self.all_stations)
+        self.vehicles = self.generate_vehicles(self.num_vehicles)
+        
         self.vehicle_vis = {v.id: [[v.current_station.id], [], [], []] for v in self.vehicles}
         self.print_number_of_bikes()
+        
+        for veh1 in self.vehicles:
+            self.trigger_stack.append(VehicleEvent(self.current_time, self.current_time, veh1, self, greedy=self.greedy))
+        if not self.memory_mode:
+            self.generate_trips(self.simulation_time // 60)
+        self.trigger_stack = self.trigger_start_stack + self.trigger_stack
+        self.trigger_stack = sorted(self.trigger_stack, key=lambda l: l.end_time)
+
+
+    def generate_stations(self,num_stations,all_stations):
+        #data_file = open("Input//AllData", "rb")     
+        #all_stations = pickle.load(data_file)
+        #data_file.close()
+        stations = create_subset(all_stations, num_stations) #input//preprocess.py
+        #reset_stations(stations)
+        if self.num_stations >= 5:
+            stations[4].depot = True   #why hardcoded?
+        else:
+            print('Possible error due to not setting a depot station')
+        return stations
+
+    def generate_vehicles(self,num_vehicles):
+        vehicles = list()
+        if self.num_stations < self.num_vehicles:
+            print('Possible error: too few stations compared to vehicles')
+        for k in range(num_vehicles):  #construct the actual vehicles...
+            vehicles.append(Vehicle(init_battery_load=40, init_charged_bikes=0, init_flat_bikes=0,
+                                    current_station=self.stations[k], id=k))
+        return vehicles
 
     def run_simulation(self):
         record_trigger = self.current_time + 60
@@ -66,14 +110,7 @@ class Environment:
         self.total_starvations = temp_starve
         self.total_congestions = temp_cong
 
-    def set_up_system(self):
-        for veh1 in self.vehicles:
-            self.trigger_stack.append(VehicleEvent(self.current_time, self.current_time, veh1, self, greedy=self.greedy))
-        if not self.memory_mode:
-            self.generate_trips(self.simulation_time // 60)
-        self.trigger_stack = self.trigger_start_stack + self.trigger_stack
-        self.trigger_stack = sorted(self.trigger_stack, key=lambda l: l.end_time)
-
+    
     def event_trigger(self):
         if len(self.trigger_start_stack) == 0:
             event = self.trigger_stack.pop(0)
@@ -108,7 +145,7 @@ class Environment:
                     num_bikes_leaving = int(np.random.poisson(lam=st.get_outgoing_customer_rate(hour), size=1)[0])
                     next_st_prob = st.get_subset_prob(self.stations)
                     for i in range(num_bikes_leaving):
-                        start_time = random.randint(hour * 60, (hour+1) * 60)
+                        start_time = np.random.randint(hour * 60, (hour+1) * 60)
                         next_station = np.random.choice(self.stations, p=next_st_prob)
                         charged = np.random.binomial(1, Environment.charged_rate)
                         trip = Trip(st, next_station, start_time, self.stations,
