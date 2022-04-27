@@ -220,6 +220,7 @@ def get_input_data_from_snapshot_df(df, datestring):
         df = dock_id[1]
 
         dock_info = dict()
+        print('column_names: ', df.columns)   #not total_num_docks?
         dock_info["num_bikes_list"] = dict(zip(df.date, df.current_num_bikes))
         dock_info["max_capacity"] = df.total_num_docks.mean()
         dock_info["dock_group_title"] = df.iloc[0].dock_group_title
