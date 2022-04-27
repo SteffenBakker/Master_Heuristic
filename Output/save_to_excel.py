@@ -1,174 +1,50 @@
 import pandas as pd
+from datetime import datetime
+from os import path
 
 
-def save_time_output(no_stations, branching, scenarios, no_vehicles, time, writer):
-    df = pd.DataFrame(columns=['Stations', 'Vehicles', 'Branching', 'Scenarios', 'Time'])
+def write_excel_output(env):
+    
+    # Create excel writer
+    #openpyxl gives some error in the encoding, but excel can recover the file. good for now
+    if path.exists("Output/results.xlsx"):
+        writer = pd.ExcelWriter("Output/results.xlsx",engine='openpyxl',mode='a', if_sheet_exists='overlay')  #removing engin=openpyxl leads to an error with max_row (due to xlsxwriter)
+    else:
+        writer = pd.ExcelWriter("Output/results.xlsx",engine='openpyxl')  
+    
+    now = datetime.now()
+    dt_string = now.strftime("%d/%m/%Y %H:%M:%S")
+    df = pd.DataFrame(columns=['Timestamp','Seed_gen_trips','Hour','Num_stations','Num_vehicles',
+                               'Num_scenarios','Time_horizon' ,'Branching_constant','Total_requests', 
+                                 'Starvations', 'Congestions','Strategy',
+                                 'Master_num_called','Master_cpu','Scoring_cpu',
+                                 'Heuristic_cpu_total'])
 
-    new_row = {'Stations': no_stations, 'Vehicles': no_vehicles, 'Branching': branching, 'Scenarios': scenarios,
-               'Time': time}
+    for hour in range(len(env.total_starvations_per_hour)):
+        new_row = pd.DataFrame({'Timestamp':dt_string,
+                    'Seed_gen_trips': env.seed_generating_trips,
+                   'Num_stations': len(env.stations), 
+                   'Num_vehicles': len(env.vehicles), 
+                   'Num_scenarios': env.scenarios, 
+                   'Time_horizon': env.time_horizon,
+                   'Branching_constant': env.init_branching,
+                   'Hour': hour+7,
+                   'Starvations': env.total_starvations_per_hour[hour], 
+                   'Congestions': env.total_congestions_per_hour[hour]
+                   # 'Strategy': env.strategy,
+                   # 'Total_requests': env.total_gen_trips,
+                   # 'Master_cpu': sum(env.master_problem_cpu_times_per_hour[hour]),
+                   # 'Master_num_called': len(env.master_problem_cpu_times_per_hour[hour]),
+                   # 'Scoring_cpu': sum(env.scoring_problem_cpu_times_per_hour[hour]),
+                   # 'Heuristic_cpu_total': env.simulation_duration_per_hour[hour]
+                   }, index=[0])    
+        df = pd.concat([df, new_row],ignore_index=True)
 
-    time_df = df.append(new_row, ignore_index=True)
-
-    if 'solution_time' in writer.book.sheetnames:
-        start_row = writer.sheets['solution_time'].max_row
-        time_df.to_excel(writer, startrow=start_row, index=False, header=False, sheet_name='solution_time')
+    if 'Results' in writer.book.sheetnames:
+        start_row = writer.sheets['Results'].max_row
+        df.to_excel(writer, startrow=start_row, index=False, header=False, sheet_name='Results')
         writer.save()
     else:
-        time_df.to_excel(writer, index=False, sheet_name='solution_time')
+        df.to_excel(writer, index=False, sheet_name='Results')
         writer.save()
-
-
-def save_weight_output(set_id, scenario, env, base_s, base_c, writer):
-    df = pd.DataFrame(columns=['Weight set', 'W_drive', 'W_dev', 'W_viol', 'W_net', 'Scenario', 'Total_requests',
-                               'Base starvations', 'Base congestions', 'Starvations', 'Congestions'])
-
-    new_row = {'Weight set': set_id, 'W_drive': env.crit_weights[0], 'W_dev': env.crit_weights[1], 'W_viol': env.crit_weights[2],
-               'W_net': env.crit_weights[3], 'Scenario': scenario,
-               'Total_requests': env.total_gen_trips, 'Base starvations': base_s, 'Base congestions': base_c,
-               'Starvations': env.total_starvations, 'Congestions': env.total_congestions}
-
-    weight_df = df.append(new_row, ignore_index=True)
-
-    if 'Weight_simulation' in writer.book.sheetnames:
-        start_row = writer.sheets['Weight_simulation'].max_row
-        weight_df.to_excel(writer, startrow=start_row, index=False, header=False, sheet_name='Weight_simulation')
-        writer.save()
-    else:
-        weight_df.to_excel(writer, index=False, sheet_name='Weight_simulation')
-        writer.save()
-
-
-def save_comparison_output(scenario, sim_heur, base_s, base_c, greedy_s, greedy_c, writer, crit_off_s=None,
-                           crit_off_c=None):
-    df = pd.DataFrame(columns=['Scenario', 'Total_requests', 'Base starvations', 'Base congestions',
-                               'Greedy starvations', 'Greedy congestions', 'Heuristic starvations',
-                               'Heuristic congestions', 'Criticality off starvations', 'Criticality off congestions'])
-
-    new_row = {'Scenario': scenario, 'Total_requests': sim_heur.total_gen_trips, 'Base starvations': base_s,
-               'Base congestions': base_c, 'Greedy starvations': greedy_s, 'Greedy congestions': greedy_c,
-               'Heuristic starvations': sim_heur.total_starvations, 'Heuristic congestions': sim_heur.total_congestions,
-               'Criticality off starvations': crit_off_s, 'Criticality off congestions': crit_off_c}
-
-    weight_df = df.append(new_row, ignore_index=True)
-
-    if 'Compare_strategies' in writer.book.sheetnames:
-        start_row = writer.sheets['Compare_strategies'].max_row
-        weight_df.to_excel(writer, startrow=start_row, index=False, header=False, sheet_name='Compare_strategies')
-        writer.save()
-    else:
-        weight_df.to_excel(writer, index=False, sheet_name='Compare_strategies')
-        writer.save()
-
-
-def save_first_step_solution(instance, scenarios, batteries, net_charged, net_flat, next_station, writer, ideal,
-                             charged, flat):
-
-    df = pd.DataFrame(columns=['Instance', 'Scenarios', 'Next station', '#Batteries', 'Net charged load',
-                               'Net flat load', 'Ideal state', 'Charged', 'Flat'])
-
-    new_row = {'Instance': instance, 'Scenarios': scenarios, 'Next station': next_station.id, '#Batteries': batteries,
-               'Net charged load': net_charged, 'Net flat load': net_flat, 'Ideal state': ideal, 'Charged': charged,
-               'Flat': flat}
-
-    weight_df = df.append(new_row, ignore_index=True)
-
-    if 'First_solution' in writer.book.sheetnames:
-        start_row = writer.sheets['First_solution'].max_row
-        weight_df.to_excel(writer, startrow=start_row, index=False, header=False, sheet_name='First_solution')
-        writer.save()
-    else:
-        weight_df.to_excel(writer, index=False, sheet_name='First_solution')
-        writer.save()
-
-
-def save_vehicle_output(day, no_veh, sim_heur, base_env, sim_greedy, writer, crit_env, alfa=1):
-    df = pd.DataFrame(columns=['Day', 'Total_requests', 'Alfa', 'Vehicles', 'Hour', 'Base starvations', 'Base congestions',
-                               'Greedy starvations', 'Greedy congestions',
-                               'Heuristic starvations', 'Heuristic congestions', 'Crit-off starvations',
-                               'Crit-off congestions'])
-
-    for hour in range(len(base_env.total_starvations_per_hour)):
-        new_row = {'Day': day, 'Total_requests': sim_heur.total_gen_trips, 'Alfa':alfa, 'Vehicles': no_veh, 'Hour': hour+7,
-                   'Base starvations': base_env.total_starvations_per_hour[hour], 'Base congestions':
-                       base_env.total_congestions_per_hour[hour],
-                   'Greedy starvations': sim_greedy.total_starvations_per_hour[hour],
-                   'Greedy congestions': sim_greedy.total_congestions_per_hour[hour],  'Heuristic starvations':
-                       sim_heur.total_starvations_per_hour[hour], 'Heuristic congestions':
-                       sim_heur.total_congestions_per_hour[hour], 'Crit-off starvations':
-                       crit_env.total_starvations_per_hour[hour],  'Crit-off congestions':
-                       crit_env.total_congestions_per_hour[hour]}
-
-        weight_df = df.append(new_row, ignore_index=True)
-
-        if 'Vehicle' in writer.book.sheetnames:
-            start_row = writer.sheets['Vehicle'].max_row
-            weight_df.to_excel(writer, startrow=start_row, index=False, header=False, sheet_name='Vehicle')
-            writer.save()
-        else:
-            weight_df.to_excel(writer, index=False, sheet_name='Vehicle')
-            writer.save()
-
-
-def save_vary_vehicle_output(day, no_veh, sim_heur, base_env, writer):
-    df = pd.DataFrame(columns=['Day', 'Total_requests', 'Vehicles', 'Hour', 'Base starvations', 'Base congestions',
-                               'Heuristic starvations', 'Heuristic congestions'])
-
-    for hour in range(len(base_env.total_starvations_per_hour)):
-        new_row = {'Day': day, 'Total_requests': sim_heur.total_gen_trips, 'Vehicles': no_veh, 'Hour': hour+7,
-                   'Base starvations': base_env.total_starvations_per_hour[hour], 'Base congestions':
-                       base_env.total_congestions_per_hour[hour], 'Heuristic starvations':
-                       sim_heur.total_starvations_per_hour[hour], 'Heuristic congestions':
-                       sim_heur.total_congestions_per_hour[hour]}
-
-        weight_df = df.append(new_row, ignore_index=True)
-
-        if 'Vehicle' in writer.book.sheetnames:
-            start_row = writer.sheets['Vehicle'].max_row
-            weight_df.to_excel(writer, startrow=start_row, index=False, header=False, sheet_name='Vehicle')
-            writer.save()
-        else:
-            weight_df.to_excel(writer, index=False, sheet_name='Vehicle')
-            writer.save()
-
-
-def save_fleet_output(day, no_rb_veh, no_bat_veh, sim_heur, base_env, writer):
-    df = pd.DataFrame(columns=['Day', 'Total_requests', 'Reb_vehicles', 'Battery_vehicles', 'Hour', 'Base starvations',
-                               'Base congestions', 'Heuristic starvations', 'Heuristic congestions'])
-
-    for hour in range(len(base_env.total_starvations_per_hour)):
-        new_row = {'Day': day, 'Total_requests': sim_heur.total_gen_trips, 'Reb_vehicles': no_rb_veh,
-                   'Battery_vehicles': no_bat_veh, 'Hour': hour+7,
-                   'Base starvations': base_env.total_starvations_per_hour[hour], 'Base congestions':
-                       base_env.total_congestions_per_hour[hour], 'Heuristic starvations':
-                       sim_heur.total_starvations_per_hour[hour], 'Heuristic congestions':
-                       sim_heur.total_congestions_per_hour[hour]}
-
-        weight_df = df.append(new_row, ignore_index=True)
-
-        if 'Fleet' in writer.book.sheetnames:
-            start_row = writer.sheets['Fleet'].max_row
-            weight_df.to_excel(writer, startrow=start_row, index=False, header=False, sheet_name='Fleet')
-            writer.save()
-        else:
-            weight_df.to_excel(writer, index=False, sheet_name='Fleet')
-            writer.save()
-
-
-def save_station_cap_output(day, sim_heur, base, station_cap, writer):
-    df = pd.DataFrame(columns=['Day', 'Total_requests', 'Station capacity', 'Base starvations', 'Base congestions',
-                               'Heuristic starvations', 'Heuristic congestions'])
-
-    new_row = {'Day': day, 'Total_requests': sim_heur.total_gen_trips, 'Station capacity': station_cap,
-               'Base starvations': base.total_starvations, 'Base congestions': base.total_congestions,
-               'Heuristic starvations': sim_heur.total_starvations,
-               'Heuristic congestions': sim_heur.total_congestions}
-
-    weight_df = df.append(new_row, ignore_index=True)
-
-    if 'Compare_cap_strategies' in writer.book.sheetnames:
-        start_row = writer.sheets['Compare_cap_strategies'].max_row
-        weight_df.to_excel(writer, startrow=start_row, index=False, header=False, sheet_name='Compare_cap_strategies')
-        writer.save()
-    else:
-        weight_df.to_excel(writer, index=False, sheet_name='Compare_cap_strategies')
-        writer.save()
+    #writer.close()
