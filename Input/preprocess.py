@@ -1,6 +1,6 @@
 import json
 from google.cloud import bigquery as bq
-from Simulation.set_up_simulation import setup_stations_students
+from Input.set_up_simulation_data import setup_stations_students
 
 
 def get_driving_time_from_id(station_id_1, station_id_2):

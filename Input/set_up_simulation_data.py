@@ -337,5 +337,5 @@ if __name__ == '__main__':
             print(st.station_car_travel_time)
             print(st.name)
             print(st.actual_num_bikes)
-            print(st.max_capacity)
+            print(st.station_cap)
             print(st.demand_per_hour)
