@@ -52,6 +52,8 @@ class Environment:
         self.total_congestions_per_hour = list()
 
         self.vehicle_vis = None
+        
+        self.system_setup = 0
 
     
     def set_up_system(self):
@@ -70,6 +72,7 @@ class Environment:
         self.trigger_stack = self.trigger_start_stack + self.trigger_stack
         self.trigger_stack = sorted(self.trigger_stack, key=lambda l: l.end_time)
 
+        self.system_setup = 1
 
     def generate_stations(self,num_stations,all_stations):
         #data_file = open("Input//AllData", "rb")     
@@ -93,15 +96,18 @@ class Environment:
         return vehicles
 
     def run_simulation(self):
-        record_trigger = self.current_time + 60
-        while self.current_time < self.simulation_stop:
-            if self.current_time >= record_trigger:
-                record_trigger += 60
-                self.update_violations()
-                self.total_starvations_per_hour.append(self.total_starvations)
-                self.total_congestions_per_hour.append(self.total_congestions)
-            self.event_trigger()
-        self.end_simulation()
+        if self.system_setup == 0:
+            print('THE SYSTEM IS NOT SET UP')
+        else:
+            record_trigger = self.current_time + 60
+            while self.current_time < self.simulation_stop:
+                if self.current_time >= record_trigger:
+                    record_trigger += 60
+                    self.update_violations()
+                    self.total_starvations_per_hour.append(self.total_starvations)
+                    self.total_congestions_per_hour.append(self.total_congestions)
+                self.event_trigger()
+            self.end_simulation()
 
     def update_violations(self):
         temp_starve = 0

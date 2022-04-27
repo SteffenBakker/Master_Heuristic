@@ -72,13 +72,17 @@ if __name__ == '__main__':
             parameters = dict(zip(keys, values))
             for key, value in parameters.items():
                 setattr(sim_env,key, value)
+                print(key, value)
             
-            
+            sim_env.set_up_system()
             #start simulation
             sim_env.run_simulation()
             write_excel_output(sim_env)
             del sim_env,parameters
     
+    
+    # TO DO: POP FROM EMPTY LIST   (SYSTEM NOT SET UP!!!)
+    # HAD THIS ERROR BEFORE... WHY?? 
     
     
     
