@@ -4,13 +4,15 @@ from Subproblem.subproblem_model import run_model
 
 class ModelManager:
 
-    time_horizon = 25
+    time_horizon = 25  #this is being overwritten, so not necessarily hardcoded
 
-    def __init__(self, vehicle, hour):
+    def __init__(self, vehicle, hour, time_horizon):
         self.vehicle = vehicle
         self.scores = list()
         self.hour = hour
-
+        self.time_horizon
+        ModelManager.time_horizon = time_horizon
+        
     def run_one_subproblem(self, route, route_full_set_index, pattern, customer_scenario, weights):
         customer_arrivals = ModelManager.arrivals_after_visit(route, route_full_set_index, customer_scenario)
         L_CS = list()

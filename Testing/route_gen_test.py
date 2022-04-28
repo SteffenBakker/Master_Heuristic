@@ -16,7 +16,7 @@ class RouteGenTester(unittest.TestCase):
                             outgoing_charged_bike_rate=0.051, ideal_state=10, station_id='386',
                             station_cap=10, charging=False)
 
-    test_route = Route(starting_st=start_station, vehicle=test_vehicle, time_hor=25)
+    test_route = Route(starting_st=start_station, vehicle=test_vehicle, time_hor=25, handling_time=0.5)
 
     test_gen_route = GenerateRoutePattern(starting_st=start_station, stations=test_stations, vehicle=test_vehicle)
     test_gen_route.get_columns()

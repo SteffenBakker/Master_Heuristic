@@ -8,10 +8,10 @@ import time
 
 class HeuristicManager:
 
-    time_h = 25
 
-    def __init__(self, vehicles, station_full_set, hour, no_scenarios=1, init_branching=7, weights=None,
-                 criticality=True, writer=None, crit_weights=None):
+    def __init__(self, vehicles, station_full_set, hour, no_scenarios, init_branching, 
+                 time_horizon,handling_time, flexibility,average_handling_time, 
+                 weights=None, criticality=True, writer=None, crit_weights=None):
         self.no_scenarios = no_scenarios
         self.customer_arrival_scenarios = list()
         self.vehicles = vehicles
@@ -25,7 +25,12 @@ class HeuristicManager:
         self.criticality = criticality
         self.crit_weights = crit_weights
         self.writer = writer
-
+        
+        self.flexibility = flexibility
+        self.average_handling_time = average_handling_time
+        self.time_horizon = time_horizon 
+        self.handling_time = handling_time
+        
         self.generate_scenarios()
 
         start_sub = time.time()    
@@ -45,12 +50,14 @@ class HeuristicManager:
         self.run_master_problem()
 
     def run_vehicle_subproblems(self, vehicle):
-        gen = GenerateRoutePattern(vehicle.current_station, self.station_set, vehicle,
-                                   self.hour, init_branching=self.init_branching, criticality=self.criticality,
+        gen = GenerateRoutePattern(vehicle.current_station, self.station_set, vehicle, 
+                                   self.hour, self.init_branching, self.time_horizon,
+                                   self.handling_time,  self.flexibility, self.average_handling_time,
+                                   criticality=self.criticality,
                                    crit_weights=self.crit_weights)
         gen.get_columns()
         self.route_patterns.append(gen)
-        model_man = ModelManager(vehicle, self.hour)
+        model_man = ModelManager(vehicle, self.hour,self.time_horizon)
         route_scores = list()
         for route in gen.finished_gen_routes:
             route_full_set_index = [get_index(st.id, self.station_set) for st in route.stations]
@@ -99,9 +106,9 @@ class HeuristicManager:
         for i in range(self.no_scenarios):
             scenario = list()
             for station in self.station_set:
-                c1_times = HeuristicManager.poisson_simulation(station.get_incoming_charged_rate(self.hour) / 60, HeuristicManager.time_h)
-                c2_times = HeuristicManager.poisson_simulation(station.get_incoming_flat_rate(self.hour) / 60, HeuristicManager.time_h)
-                c3_times = HeuristicManager.poisson_simulation(station.get_outgoing_customer_rate(self.hour) / 60, HeuristicManager.time_h)
+                c1_times = HeuristicManager.poisson_simulation(station.get_incoming_charged_rate(self.hour) / 60, self.time_horizon)
+                c2_times = HeuristicManager.poisson_simulation(station.get_incoming_flat_rate(self.hour) / 60, self.time_horizon)
+                c3_times = HeuristicManager.poisson_simulation(station.get_outgoing_customer_rate(self.hour) / 60, self.time_horizon)
                 scenario.append([c1_times, c2_times, c3_times])
             self.customer_arrival_scenarios.append(scenario)
 

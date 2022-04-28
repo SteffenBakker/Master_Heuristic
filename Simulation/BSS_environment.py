@@ -14,7 +14,9 @@ class Environment:
     charged_rate = 0.95
 
     def __init__(self, start_hour, simulation_time, num_stations,all_stations, 
-                 num_vehicles, init_branching, scenarios, basic_seed = 1, memory_mode=False,
+                 num_vehicles, init_branching,time_horizon, scenarios,
+                 basic_seed = 1, handling_time=0.5,parking_time=1 , 
+                 flexibility=3,average_handling_time=6,memory_mode=False,
                  trigger_start_stack=list(), greedy=False, weights=(0.6, 0.1, 0.3, 0.8, 0.2),
                  criticality=True, crit_weights=(0.2, 0.1, 0.5, 0.2)):
         self.stations = None
@@ -41,7 +43,11 @@ class Environment:
 
         self.basic_seed = basic_seed
         self.seed_generating_trips = None
-        self.time_horizon = 25
+        self.time_horizon = time_horizon
+        self.parking_time = parking_time
+        self.handling_time = handling_time
+        self.flexibility = flexibility 
+        self.average_handling_time = average_handling_time
         self.strategy = None
         
         self.memory_mode = memory_mode

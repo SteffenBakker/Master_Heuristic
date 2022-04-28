@@ -3,15 +3,15 @@ import copy
 
 class Route:
 
-    def __init__(self, starting_st, vehicle, hour, time_hor=25):
+    def __init__(self, starting_st, vehicle, hour, time_horizon,handling_time):
         self.starting_station = starting_st
         self.stations = [starting_st]
         self.length = 0
         self.station_visits = [0]
         self.upper_extremes = None
-        self.time_horizon = time_hor
+        self.time_horizon = time_horizon
         self.vehicle = vehicle
-        self.handling_time = 0.5
+        self.handling_time = handling_time
         self.hour = hour
 
     def add_station(self, station, added_station_time):
@@ -37,13 +37,14 @@ class Route:
 
 class GenerateRoutePattern:
 
-    flexibility = 3
-    average_handling_time = 6
-
-    def __init__(self, starting_st, stations, vehicle, hour, init_branching=8, criticality=True, dynamic=True,
+    def __init__(self, starting_st, stations, vehicle, hour, init_branching,
+                 time_horizon,handling_time, flexibility=3, average_handling_time=6,
+                 criticality=True, dynamic=True,
                  crit_weights=(0.2, 0.1, 0.5, 0.2)):
+        self.flexibility=flexibility,
+        self.average_handling_time=average_handling_time,
         self.starting_station = starting_st
-        self.time_horizon = 25
+        self.time_horizon = time_horizon
         self.vehicle = vehicle
         self.finished_gen_routes = None
         self.patterns = None
@@ -53,14 +54,19 @@ class GenerateRoutePattern:
         self.criticality = criticality
         self.dynamic = dynamic
         self.w_drive, self.w_dev, self.w_viol, self.w_net = crit_weights
+        self.time_horizon = time_horizon
+        self.handling_time = handling_time
 
     def get_columns(self):
+        
+        flex = int((self.flexibility)[0])   #this somehow turns into (flexibility,) which is a tuple, no idea why...
+        avg_handling = int((self.average_handling_time)[0])
+        
         finished_routes = list()
-        construction_routes = [Route(self.starting_station, self.vehicle, self.hour)]
+        construction_routes = [Route(self.starting_station, self.vehicle, self.hour,self.time_horizon,self.handling_time)]
         while construction_routes:
             for col in construction_routes:
-                if col.length < (self.time_horizon - GenerateRoutePattern.flexibility):
-
+                if col.length < self.time_horizon - flex:
                     if not self.criticality:
                         cand_scores = col.starting_station.get_candidate_stations(
                             self.all_stations, tabu_list=[c.id for c in col.stations], max_candidates=9)
@@ -89,7 +95,7 @@ class GenerateRoutePattern:
                     for j in range(self.init_branching):
                         new_col = copy.deepcopy(col)
                         new_col.add_station(cand_scores[j][0], cand_scores[j][1] +
-                                            GenerateRoutePattern.average_handling_time)
+                                            avg_handling)
                         construction_routes.append(new_col)
 
                 else:

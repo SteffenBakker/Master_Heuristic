@@ -4,8 +4,6 @@ import time
 
 class Event:
 
-    handling_time = 0.5
-    parking_time = 1
     id = 0
 
     def __init__(self, start_time):
@@ -27,6 +25,8 @@ class VehicleEvent(Event):
         self.env = environment
         self.end_time = end_time
         self.greedy = greedy
+        self.handling_time = self.env.handling_time
+        self.parking_time = self.env.parking_time
 
     def arrival_handling(self):
         if self.greedy:
@@ -48,7 +48,7 @@ class VehicleEvent(Event):
                 continue
             first = True
             driving_time = self.vehicle.current_station.get_station_car_travel_time(st.id)
-            score = st.get_criticality_score(self.vehicle, 25, hour,
+            score = st.get_criticality_score(self.vehicle, self.env.time_horizon, hour,
                                              driving_time, 0.2, 0.1, 0.5, 0.2, first)
             cand_scores.append([st, driving_time, score])
 
@@ -88,10 +88,10 @@ class VehicleEvent(Event):
                 flat_load = min(self.vehicle.current_station.current_flat_bikes, self.vehicle.available_bike_capacity())
                 self.vehicle.current_station.current_flat_bikes -= flat_load
                 self.vehicle.current_flat_bikes += flat_load
-        handling_time = (swaps + flat_load + flat_unload + bat_unload + bat_load) * Event.handling_time
+        handling_time = (swaps + flat_load + flat_unload + bat_unload + bat_load) * self.handling_time
         driving_time = cand_scores[0][1]
         self.vehicle.current_station = next_station
-        end_time = self.env.current_time + driving_time + handling_time + Event.parking_time
+        end_time = self.env.current_time + driving_time + handling_time + self.parking_time
         self.env.trigger_stack.append(VehicleEvent(self.env.current_time, end_time, self.vehicle, self.env, self.greedy))
         self.env.trigger_stack = sorted(self.env.trigger_stack, key=lambda l: l.end_time)
 
@@ -99,7 +99,9 @@ class VehicleEvent(Event):
         hour = self.env.current_time // 60
         event_time_start = time.time()
         heuristic_man = HeuristicManager(self.env.vehicles, self.env.stations, hour,
-                                         no_scenarios=self.env.scenarios, init_branching=self.env.init_branching,
+                                         self.env.scenarios, self.env.init_branching,
+                                         self.env.time_horizon,self.handling_time,
+                                         self.env.flexibility, self.env.average_handling_time,
                                          weights=self.env.weights, crit_weights=self.env.crit_weights)
         self.event_time = time.time() - event_time_start
         self.sub_time = heuristic_man.sub_time
@@ -111,8 +113,8 @@ class VehicleEvent(Event):
         driving_time = self.vehicle.current_station.get_station_car_travel_time(next_station.id)
         net_charged = abs(pattern[1] - pattern[3])
         net_flat = abs(pattern[2] - pattern[4])
-        handling_time = (pattern[0] + net_charged + net_flat) * Event.handling_time
-        end_time = driving_time + handling_time + self.env.current_time + Event.parking_time
+        handling_time = (pattern[0] + net_charged + net_flat) * self.handling_time
+        end_time = driving_time + handling_time + self.env.current_time + self.parking_time
 
         self.env.vehicle_vis[self.vehicle.id][0].append(next_station.id)
         self.env.vehicle_vis[self.vehicle.id][1].append([self.vehicle.current_charged_bikes,

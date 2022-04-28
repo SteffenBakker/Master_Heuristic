@@ -8,7 +8,7 @@ import itertools as it
 
 
 
-simple_run = False
+simple_run = True
 scenario_analysis = not simple_run
 
 #BASE DATA
@@ -51,7 +51,7 @@ if __name__ == '__main__':
         
         np.random.seed(basic_seed)
         sim_env = Environment(start_hour, simulation_time, num_stations, copy.deepcopy(all_stations), 
-                              num_vehicles, branching, subproblem_scenarios, basic_seed, 
+                              num_vehicles, branching, time_horizon, subproblem_scenarios, basic_seed, 
                               greedy=greedy)
         sim_env.set_up_system()    # SETUP TO DO
         sim_env.run_simulation()
@@ -65,7 +65,7 @@ if __name__ == '__main__':
         num_scenario_analyses = len(combinations)
         
         base_env = Environment(start_hour, simulation_time, num_stations, copy.deepcopy(all_stations), 
-                              num_vehicles, branching, subproblem_scenarios, basic_seed,
+                              num_vehicles, branching,time_horizon, subproblem_scenarios, basic_seed,
                               greedy=greedy)
         envs = [copy.deepcopy(base_env) for i in range(num_scenario_analyses)]
         
