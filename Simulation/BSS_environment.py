@@ -6,14 +6,15 @@ from Simulation.event import VehicleEvent
 import copy
 from Input.preprocess import create_subset
 from vehicle import Vehicle
+import time
 
 
 class Environment:
 
     charged_rate = 0.95
 
-    def __init__(self, start_hour, simulation_time, num_stations,all_stations , 
-                 num_vehicles, init_branching, scenarios, memory_mode=False,
+    def __init__(self, start_hour, simulation_time, num_stations,all_stations, 
+                 num_vehicles, init_branching, scenarios, basic_seed = 1, memory_mode=False,
                  trigger_start_stack=list(), greedy=False, weights=(0.6, 0.1, 0.3, 0.8, 0.2),
                  criticality=True, crit_weights=(0.2, 0.1, 0.5, 0.2)):
         self.stations = None
@@ -24,6 +25,7 @@ class Environment:
         self.num_vehicles = num_vehicles 
         
         self.start_hour = start_hour
+        self.num_hours = simulation_time//60
         self.current_time = start_hour * 60
         self.simulation_time = simulation_time
         self.simulation_stop = simulation_time + self.current_time
@@ -37,13 +39,16 @@ class Environment:
         self.criticality = criticality
         self.crit_weights = crit_weights
 
+        self.basic_seed = basic_seed
         self.seed_generating_trips = None
         self.time_horizon = 25
-
+        self.strategy = None
+        
         self.memory_mode = memory_mode
         self.initial_stack = None
 
         self.total_gen_trips = len(trigger_start_stack)
+        self.trips_per_hour = []
 
         self.total_starvations = 0
         self.total_congestions = 0
@@ -55,8 +60,31 @@ class Environment:
         
         self.system_setup = 0
 
-    
+        #OTHER
+        self.simulation_start_clock_time = 0
+        self.simulation_duration_total = 0
+        self.simulation_duration = 0
+        self.simulation_duration_per_hour = []
+        self.master_problem_num_times_called = []
+        self.master_problem_cpu_times = []  #just used as a placeholder
+        self.master_problem_cpu_time_per_hour = []
+        #self.master_duration_total = 0
+        self.scoring_problem_cpu_times = []
+        self.scoring_problem_cpu_time_per_hour = []
+        #self.scoring_duration_total = 0    
+
+
     def set_up_system(self):
+        
+        self.num_hours = self.simulation_time//60
+        self.current_time = self.start_hour * 60
+        
+        if self.num_vehicles==0:
+            self.strategy ='base'
+        elif self.greedy:
+            self.strategy = 'greedy'
+        else:
+            self.strategy = 'heuristic'
         
         self.stations = self.generate_stations(self.num_stations,self.all_stations)
         self.vehicles = self.generate_vehicles(self.num_vehicles)
@@ -95,6 +123,8 @@ class Environment:
         return vehicles
 
     def run_simulation(self):
+        self.simulation_start_clock_time = time.time()
+        self.simulation_duration_start = time.time()
         if self.system_setup == 0:
             print('THE SYSTEM IS NOT SET UP')
         else:
@@ -105,9 +135,22 @@ class Environment:
                     self.update_violations()
                     self.total_starvations_per_hour.append(self.total_starvations)
                     self.total_congestions_per_hour.append(self.total_congestions)
+                    self.update_times_per_hour()
                 self.event_trigger()
+            print('End the simulation')
             self.end_simulation()
+            self.simulation_duration_total = time.time() - self.simulation_start_clock_time
 
+    def update_times_per_hour(self):
+        self.simulation_duration_per_hour.append(time.time() - self.simulation_duration_start)
+        self.simulation_duration_start = time.time()
+        self.master_problem_cpu_time_per_hour.append(sum(self.master_problem_cpu_times))
+        self.master_problem_num_times_called.append(len(self.master_problem_cpu_times))
+        self.master_problem_cpu_times = []
+        self.scoring_problem_cpu_time_per_hour.append(sum(self.scoring_problem_cpu_times))
+        self.scoring_problem_cpu_times = []
+
+        
     def update_violations(self):
         temp_starve = 0
         temp_cong = 0
@@ -135,6 +178,9 @@ class Environment:
                 event = self.trigger_stack.pop(0)
                 self.current_time = event.end_time
         event.arrival_handling()
+        if isinstance(event,VehicleEvent):   #or isinstance(event,VehicleEvent)
+                self.scoring_problem_cpu_times.append(event.sub_time)
+                self.master_problem_cpu_times.append(event.master_time)
         if event.event_time > 0:
             self.event_times.append(event.event_time)
         if isinstance(event, Trip) and event.redirect:
@@ -149,9 +195,11 @@ class Environment:
         current_hour = self.current_time // 60
         for hour in range(current_hour, current_hour + no_of_hours):
             trigger_start = list()
+            num_trips = 0
             for st in self.stations:
                 if not st.depot:
                     num_bikes_leaving = int(np.random.poisson(lam=st.get_outgoing_customer_rate(hour), size=1)[0])
+                    num_trips += num_bikes_leaving
                     next_st_prob = st.get_subset_prob(self.stations)
                     for i in range(num_bikes_leaving):
                         start_time = np.random.randint(hour * 60, (hour+1) * 60)
@@ -161,6 +209,7 @@ class Environment:
                                     charged=charged, num_bikes=1, rebalance="nearest")
                         trigger_start.append(trip)
             total_start_stack += trigger_start
+            self.trips_per_hour.append(num_trips)
         self.trigger_start_stack = sorted(total_start_stack, key=lambda l: l.start_time)
         init_stack = [copy.copy(trip) for trip in self.trigger_start_stack]
         self.initial_stack = init_stack
@@ -171,6 +220,11 @@ class Environment:
         self.update_violations()
         self.total_starvations_per_hour.append(self.total_starvations)
         self.total_congestions_per_hour.append(self.total_congestions)
+        self.total_starvations_per_hour = ([self.total_starvations_per_hour[0]] + 
+                                           list(np.diff(self.total_starvations_per_hour)))
+        self.total_congestions_per_hour = ([self.total_congestions_per_hour[0]] + 
+                                           list(np.diff(self.total_congestions_per_hour)))
+        self.update_times_per_hour()
         self.visualize_system()
         self.status()
 

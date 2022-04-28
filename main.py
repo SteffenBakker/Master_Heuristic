@@ -24,16 +24,17 @@ time_horizon=25   # TO DO
 
 seed_trips = 1    # TO DO
 seed_subproblems = 1    # TO DO
-basic_seed = 13
 
+basic_seed = 1
+greedy = False
 
 #SCENARIO DATA
 
 inputs = {
 #'seed_generating_trips':list(range(0,3)),   #simulate 10 different days
 #'init_branching':[3,5,7],
-'num_vehicles':[3],
-'num_stations':[50,50,50,50]
+'num_vehicles':[0,2,5],
+'num_stations':[20,30]
 }
 
 
@@ -50,12 +51,12 @@ if __name__ == '__main__':
         
         np.random.seed(basic_seed)
         sim_env = Environment(start_hour, simulation_time, num_stations, copy.deepcopy(all_stations), 
-                              num_vehicles, branching, subproblem_scenarios, 
-                              greedy=False)
+                              num_vehicles, branching, subproblem_scenarios, basic_seed, 
+                              greedy=greedy)
         sim_env.set_up_system()    # SETUP TO DO
         sim_env.run_simulation()
         write_excel_output(sim_env)
-        print(dir())
+
         
     if scenario_analysis:
         
@@ -64,8 +65,8 @@ if __name__ == '__main__':
         num_scenario_analyses = len(combinations)
         
         base_env = Environment(start_hour, simulation_time, num_stations, copy.deepcopy(all_stations), 
-                              num_vehicles, branching, subproblem_scenarios, 
-                              greedy=True)
+                              num_vehicles, branching, subproblem_scenarios, basic_seed,
+                              greedy=greedy)
         envs = [copy.deepcopy(base_env) for i in range(num_scenario_analyses)]
         
         for i in range(num_scenario_analyses):

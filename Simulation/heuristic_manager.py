@@ -4,7 +4,7 @@ from Subproblem.generate_route_pattern import GenerateRoutePattern
 import numpy as np
 from MasterProblem.master_params import MasterParameters
 from MasterProblem.master_model import run_master_model
-
+import time
 
 class HeuristicManager:
 
@@ -28,8 +28,13 @@ class HeuristicManager:
 
         self.generate_scenarios()
 
+        start_sub = time.time()    
         self.run_subproblems()
+        self.sub_time = time.time() -start_sub
+        
+        start_master = time.time()        
         self.run_master_problem()
+        self.master_time = time.time()-start_master
 
     def reset_manager_and_run(self, branching):
         self.route_patterns = list()
