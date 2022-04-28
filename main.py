@@ -3,21 +3,21 @@ from Output.save_to_excel import write_excel_output
 from Simulation.BSS_environment import Environment
 import copy
 import pandas as pd
-from openpyxl import load_workbook
 import numpy as np
 import itertools as it
 
 
+
 simple_run = False
-scenario_analysis = True
+scenario_analysis = not simple_run
 
 #BASE DATA
 
 #Parameters
 start_hour = 7
 simulation_time = 240  # 7 am to 11 pm   = 60*16=960   -> Smaller: 240 (60*4)
-num_stations = 20   #was at 200
-num_vehicles = 4
+num_stations = 50   #was at 200
+num_vehicles = 3
 subproblem_scenarios = 2   #was at ten
 branching = 7
 time_horizon=25   # TO DO
@@ -29,16 +29,12 @@ basic_seed = 13
 
 #SCENARIO DATA
 
-if scenario_analysis:
-
-    # TO DO    
-
-    inputs = {
-    #'seed_generating_trips':list(range(0,3)),   #simulate 10 different days
-    #'init_branching':[3,5,7],
-    'num_vehicles':[0,1,2,5],
-    'num_stations':[20,50]
-    }
+inputs = {
+#'seed_generating_trips':list(range(0,3)),   #simulate 10 different days
+#'init_branching':[3,5,7],
+'num_vehicles':[3],
+'num_stations':[50,50,50,50]
+}
 
 
 #COMMON DATA FOR ALL SCENARIOS
@@ -49,40 +45,49 @@ all_stations = generate_all_stations(start_hour)
 
 if __name__ == '__main__':
     
+    
     if simple_run:
+        
         np.random.seed(basic_seed)
         sim_env = Environment(start_hour, simulation_time, num_stations, copy.deepcopy(all_stations), 
-                              num_vehicles, branching, subproblem_scenarios, greedy=False)
+                              num_vehicles, branching, subproblem_scenarios, 
+                              greedy=False)
         sim_env.set_up_system()    # SETUP TO DO
         sim_env.run_simulation()
         write_excel_output(sim_env)
+        print(dir())
         
     if scenario_analysis:
+        
         keys = sorted(inputs)
         combinations = list(it.product(*(inputs[key] for key in keys)))
-        for values in combinations:
+        num_scenario_analyses = len(combinations)
+        
+        base_env = Environment(start_hour, simulation_time, num_stations, copy.deepcopy(all_stations), 
+                              num_vehicles, branching, subproblem_scenarios, 
+                              greedy=True)
+        envs = [copy.deepcopy(base_env) for i in range(num_scenario_analyses)]
+        
+        for i in range(num_scenario_analyses):
+            values = combinations[i]
             
             #initial setup
             np.random.seed(basic_seed)
-            sim_env = Environment(start_hour, simulation_time, num_stations, copy.deepcopy(all_stations), 
-                                  num_vehicles, branching, subproblem_scenarios, 
-                                  greedy=True)
             
             #update the parameters for the scenario
             parameters = dict(zip(keys, values))
             for key, value in parameters.items():
-                setattr(sim_env,key, value)
+                setattr(envs[i],key, value)
                 print(key, value)
             
-            sim_env.set_up_system()
+            envs[i].set_up_system()
             #start simulation
-            sim_env.run_simulation()
-            write_excel_output(sim_env)
-            del sim_env,parameters
+            envs[i].run_simulation()
+            write_excel_output(envs[i])
+            
+            
     
-    
-    # TO DO: POP FROM EMPTY LIST   (SYSTEM NOT SET UP!!!)
-    # HAD THIS ERROR BEFORE... WHY?? 
+
     
     
     

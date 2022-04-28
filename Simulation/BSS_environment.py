@@ -58,7 +58,6 @@ class Environment:
     
     def set_up_system(self):
         
-        print('NUM_VEHICLES: ',self.num_vehicles)
         self.stations = self.generate_stations(self.num_stations,self.all_stations)
         self.vehicles = self.generate_vehicles(self.num_vehicles)
         
@@ -120,6 +119,8 @@ class Environment:
 
     
     def event_trigger(self):
+        if len(self.trigger_start_stack) == 0 and len(self.trigger_stack) == 0:
+            print('ERROR: empty stacks')
         if len(self.trigger_start_stack) == 0:
             event = self.trigger_stack.pop(0)
             self.current_time = event.end_time
