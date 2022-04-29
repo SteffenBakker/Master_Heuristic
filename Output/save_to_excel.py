@@ -21,7 +21,8 @@ def write_excel_output(env):
     fixed_var['Timestamp'] = dt_string
     
     #scalars   THIS IS A PREDEFINED SCENARIO!!!!!
-    fixed_var_mapping = {'Seed_basic':'basic_seed',
+    fixed_var_mapping = {'Seed_trips':'seed_generating_trips',
+                         'Seed_subproblems':'seed_scenarios_subproblems',
                         'Num_stations':'num_stations',
                         'Num_vehicles':'num_vehicles',
                         'Num_scenarios':'scenarios',

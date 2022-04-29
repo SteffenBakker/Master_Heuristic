@@ -15,7 +15,9 @@ class Environment:
 
     def __init__(self, start_hour, simulation_time, num_stations,all_stations, 
                  num_vehicles, init_branching,time_horizon, scenarios,
-                 basic_seed = 1, handling_time=0.5,parking_time=1 , 
+                 seed_generating_trips=1, 
+                 seed_scenarios_subproblems = 2,
+                 handling_time=0.5,parking_time=1 , 
                  flexibility=3,average_handling_time=6,memory_mode=False,
                  trigger_start_stack=list(), greedy=False, weights=(0.6, 0.1, 0.3, 0.8, 0.2),
                  criticality=True, crit_weights=(0.2, 0.1, 0.5, 0.2)):
@@ -41,8 +43,9 @@ class Environment:
         self.criticality = criticality
         self.crit_weights = crit_weights
 
-        self.basic_seed = basic_seed
-        self.seed_generating_trips = None
+        self.seed_generating_trips =  seed_generating_trips
+        self.seed_scenarios_subproblems = seed_scenarios_subproblems
+
         self.time_horizon = time_horizon
         self.parking_time = parking_time
         self.handling_time = handling_time
@@ -67,6 +70,7 @@ class Environment:
         self.system_setup = 0
 
         #OTHER
+        self.times_called = 0
         self.simulation_start_clock_time = 0
         self.simulation_duration_total = 0
         self.simulation_duration = 0
@@ -81,6 +85,8 @@ class Environment:
 
 
     def set_up_system(self):
+        
+        self.rng1 = np.random.RandomState(self.seed_generating_trips)
         
         self.num_hours = self.simulation_time//60
         self.current_time = self.start_hour * 60
@@ -204,13 +210,13 @@ class Environment:
             num_trips = 0
             for st in self.stations:
                 if not st.depot:
-                    num_bikes_leaving = int(np.random.poisson(lam=st.get_outgoing_customer_rate(hour), size=1)[0])
+                    num_bikes_leaving = int(self.rng1.poisson(lam=st.get_outgoing_customer_rate(hour), size=1)[0])
                     num_trips += num_bikes_leaving
                     next_st_prob = st.get_subset_prob(self.stations)
                     for i in range(num_bikes_leaving):
-                        start_time = np.random.randint(hour * 60, (hour+1) * 60)
-                        next_station = np.random.choice(self.stations, p=next_st_prob)
-                        charged = np.random.binomial(1, Environment.charged_rate)
+                        start_time = self.rng1.randint(hour * 60, (hour+1) * 60)
+                        next_station = self.rng1.choice(self.stations, p=next_st_prob)
+                        charged = self.rng1.binomial(1, Environment.charged_rate)
                         trip = Trip(st, next_station, start_time, self.stations,
                                     charged=charged, num_bikes=1, rebalance="nearest")
                         trigger_start.append(trip)

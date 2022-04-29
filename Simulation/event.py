@@ -102,7 +102,10 @@ class VehicleEvent(Event):
                                          self.env.scenarios, self.env.init_branching,
                                          self.env.time_horizon,self.handling_time,
                                          self.env.flexibility, self.env.average_handling_time,
+                                         self.env.seed_scenarios_subproblems,
+                                         times_called = self.env.times_called,
                                          weights=self.env.weights, crit_weights=self.env.crit_weights)
+        self.env.times_called += 1
         self.event_time = time.time() - event_time_start
         self.sub_time = heuristic_man.sub_time
         self.master_time = heuristic_man.master_time

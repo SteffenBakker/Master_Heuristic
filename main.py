@@ -20,12 +20,12 @@ num_stations = 50   #was at 200
 num_vehicles = 3
 subproblem_scenarios = 2   #was at ten
 branching = 7
-time_horizon=25   # TO DO
+time_horizon=25   
 
-seed_trips = 1    # TO DO
-seed_subproblems = 1    # TO DO
+#basic_seed = 1   #alternatively just do a seed here at the beginning. A bit less controll though. 
+seed_generating_trips = 1
+seed_scenarios_subproblems = 2    # TO DO
 
-basic_seed = 1
 greedy = False
 
 #SCENARIO DATA
@@ -49,9 +49,10 @@ if __name__ == '__main__':
     
     if simple_run:
         
-        np.random.seed(basic_seed)
         sim_env = Environment(start_hour, simulation_time, num_stations, copy.deepcopy(all_stations), 
-                              num_vehicles, branching, time_horizon, subproblem_scenarios, basic_seed, 
+                              num_vehicles, branching, time_horizon, subproblem_scenarios, 
+                              seed_generating_trips = seed_generating_trips, 
+                              seed_scenarios_subproblems = seed_scenarios_subproblems,
                               greedy=greedy)
         sim_env.set_up_system()    # SETUP TO DO
         sim_env.run_simulation()
@@ -65,7 +66,7 @@ if __name__ == '__main__':
         num_scenario_analyses = len(combinations)
         
         base_env = Environment(start_hour, simulation_time, num_stations, copy.deepcopy(all_stations), 
-                              num_vehicles, branching,time_horizon, subproblem_scenarios, basic_seed,
+                              num_vehicles, branching,time_horizon, subproblem_scenarios, 
                               greedy=greedy)
         envs = [copy.deepcopy(base_env) for i in range(num_scenario_analyses)]
         
@@ -73,7 +74,6 @@ if __name__ == '__main__':
             values = combinations[i]
             
             #initial setup
-            np.random.seed(basic_seed)
             
             #update the parameters for the scenario
             parameters = dict(zip(keys, values))
@@ -90,14 +90,22 @@ if __name__ == '__main__':
     
 
     
+# IT UPDATES :D 
+# class child:
+#     def __init__(self, parent):
+#         parent.start_hour = parent.start_hour + 1
+        
+
+# class parent:
+#     def __init__(self, start_hour):
+#         self.start_hour = start_hour
+        
+
     
-    
-    
-    
-    
-    
-    
-    
+# test = parent(2)
+# child(test)
+# test.start_hour
+
     
     
     

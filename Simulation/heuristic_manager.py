@@ -10,8 +10,9 @@ class HeuristicManager:
 
 
     def __init__(self, vehicles, station_full_set, hour, no_scenarios, init_branching, 
-                 time_horizon,handling_time, flexibility,average_handling_time, 
-                 weights=None, criticality=True, writer=None, crit_weights=None):
+                 time_horizon,handling_time, flexibility,average_handling_time,
+                 seed_scenarios_subproblems,
+                 times_called=0, weights=None, criticality=True, writer=None, crit_weights=None):
         self.no_scenarios = no_scenarios
         self.customer_arrival_scenarios = list()
         self.vehicles = vehicles
@@ -25,6 +26,8 @@ class HeuristicManager:
         self.criticality = criticality
         self.crit_weights = crit_weights
         self.writer = writer
+        
+        self.rng2 = np.random.RandomState(int(str(seed_scenarios_subproblems)+str(times_called)))
         
         self.flexibility = flexibility
         self.average_handling_time = average_handling_time
@@ -106,17 +109,21 @@ class HeuristicManager:
         for i in range(self.no_scenarios):
             scenario = list()
             for station in self.station_set:
-                c1_times = HeuristicManager.poisson_simulation(station.get_incoming_charged_rate(self.hour) / 60, self.time_horizon)
-                c2_times = HeuristicManager.poisson_simulation(station.get_incoming_flat_rate(self.hour) / 60, self.time_horizon)
-                c3_times = HeuristicManager.poisson_simulation(station.get_outgoing_customer_rate(self.hour) / 60, self.time_horizon)
+                c1_times = HeuristicManager.poisson_simulation(station.get_incoming_charged_rate(self.hour) / 60, 
+                                                               self.time_horizon, self.rng2)
+                c2_times = HeuristicManager.poisson_simulation(station.get_incoming_flat_rate(self.hour) / 60, 
+                                                               self.time_horizon, self.rng2)
+                c3_times = HeuristicManager.poisson_simulation(station.get_outgoing_customer_rate(self.hour) / 60, 
+                                                               self.time_horizon, self.rng2)
                 scenario.append([c1_times, c2_times, c3_times])
             self.customer_arrival_scenarios.append(scenario)
 
+
     @staticmethod
-    def poisson_simulation(intensity_rate, time_steps):
+    def poisson_simulation(intensity_rate, time_steps,rng):
         times = list()
         for t in range(time_steps):
-            arrival = np.random.poisson(intensity_rate)
+            arrival = rng.poisson(intensity_rate)
             for i in range(arrival):
                 times.append(t)
         return times

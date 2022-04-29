@@ -41,8 +41,8 @@ class GenerateRoutePattern:
                  time_horizon,handling_time, flexibility=3, average_handling_time=6,
                  criticality=True, dynamic=True,
                  crit_weights=(0.2, 0.1, 0.5, 0.2)):
-        self.flexibility=flexibility,
-        self.average_handling_time=average_handling_time,
+        self.flexibility=flexibility
+        self.average_handling_time=average_handling_time
         self.starting_station = starting_st
         self.time_horizon = time_horizon
         self.vehicle = vehicle
@@ -59,14 +59,12 @@ class GenerateRoutePattern:
 
     def get_columns(self):
         
-        flex = int((self.flexibility)[0])   #this somehow turns into (flexibility,) which is a tuple, no idea why...
-        avg_handling = int((self.average_handling_time)[0])
         
         finished_routes = list()
         construction_routes = [Route(self.starting_station, self.vehicle, self.hour,self.time_horizon,self.handling_time)]
         while construction_routes:
             for col in construction_routes:
-                if col.length < self.time_horizon - flex:
+                if col.length < self.time_horizon - self.flexibility:
                     if not self.criticality:
                         cand_scores = col.starting_station.get_candidate_stations(
                             self.all_stations, tabu_list=[c.id for c in col.stations], max_candidates=9)
@@ -95,7 +93,7 @@ class GenerateRoutePattern:
                     for j in range(self.init_branching):
                         new_col = copy.deepcopy(col)
                         new_col.add_station(cand_scores[j][0], cand_scores[j][1] +
-                                            avg_handling)
+                                            self.average_handling_time)
                         construction_routes.append(new_col)
 
                 else:
